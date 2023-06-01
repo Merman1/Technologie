@@ -9,6 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.Optional;
+import java.util.Random;
 
 @Service
 public class StorageService {
@@ -27,6 +28,11 @@ public class StorageService {
         return null;
     }
 
+    private boolean performPlagiarismCheck(MultipartFile file) {
+        // Symulacja sprawdzania pliku przez antyplagiat
+        Random random = new Random();
+        return random.nextBoolean();
+    }
     public byte[] downloadImage(String fileName){
         Optional<imageModel> dbImageData = repository.findByName(fileName);
         byte[] images=imageUtil.decompressImage(dbImageData.get().getImageData());
