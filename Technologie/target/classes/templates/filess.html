@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="/style.css">
+    <title>projekt</title>
+</head>
+<body>
+<div class="container">
+    <div class="buttons">
+        <a href="home" class="mybtn">HOME</a>
+        <a href="files" class="mybtn">Wszystkie pliki</a>
+    </div>
+    <div class="file_content">
+        <div>
+            <table>
+                <h1>Source Code Files</h1>
+                <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="sourceCode : ${sourceCodeList}">
+                    <td th:text="${sourceCode.name}"></td>
+                    <td th:text="${sourceCode.type}"></td>
+                    <td>
+                        <a th:href="@{/source-code/{fileName}(fileName=${sourceCode.name})}">Download</a>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+
+        </div>
+    </div>
+    <div class="mybtn checkplagiat">Sprawdź plagiat</div>
+</div>
+</body>
+</html>
