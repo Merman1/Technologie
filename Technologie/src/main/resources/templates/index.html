@@ -20,8 +20,14 @@
       <div th:if="${message}" th:text="${message}" style="color: red"></div>
       <form action="/source-code/check-plagiarism" method="post" enctype="multipart/form-data">
         <input type="file" name="file" required />
+        <label for="method">Metoda sprawdzania:</label>
+        <select name="method" id="method">
+          <option value="lineLength">Sprawdzanie długości linii</option>
+          <option value="similarity">Sprawdzanie podobieństwa kodu</option>
+        </select>
         <button type="submit">Sprawdź plagiat</button>
       </form>
+
 
     </div>
   </div>
