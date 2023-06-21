@@ -16,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 @Controller
@@ -33,9 +34,9 @@ public class TechnologieApplication {
         if (file.getOriginalFilename().endsWith(".rar")) {
             plagiarismResult = service.checkPlagiarismForRAR(file, method);
         } else {
-            if (method.equals("lineLength")) {
-                boolean isPlagiarizedByLineLength = service.checkPlagiarismByLineLength(file);
-                plagiarismResult = new SourceCodeService.PlagiarismResult(isPlagiarizedByLineLength, 100.0);
+            if (method.equals("lineContent")) {
+                SourceCodeService.PlagiarismResult lineContentPlagiarismResult = service.checkPlagiarismByLineContent(file, new ArrayList<>());
+                plagiarismResult = lineContentPlagiarismResult;
             } else {
                 plagiarismResult = service.checkPlagiarism(file, method);
             }
@@ -51,20 +52,21 @@ public class TechnologieApplication {
         }
     }
 
-
     @GetMapping("/files")
     public String getFiles(Model model) {
         List<SourceCodeModel> sourceCodeList = service.getSourceCodeList();
         model.addAttribute("sourceCodeList", sourceCodeList);
         return "filess.html";
     }
+
     @GetMapping("/home")
     public String home() {
         return "index.html";
     }
+
     @PostMapping("/check-plagiarism")
-    public String checkPlagiarism(@RequestParam("file") MultipartFile file,@RequestParam(value = "method", defaultValue = "similarity") String method, RedirectAttributes redirectAttributes) throws IOException {
-        SourceCodeService.PlagiarismResult plagiarismResult = service.checkPlagiarism(file,method);
+    public String checkPlagiarism(@RequestParam("file") MultipartFile file, @RequestParam(value = "method", defaultValue = "similarity") String method, RedirectAttributes redirectAttributes) throws IOException {
+        SourceCodeService.PlagiarismResult plagiarismResult = service.checkPlagiarism(file, method);
 
         if (plagiarismResult.isPlagiarized()) {
             redirectAttributes.addFlashAttribute("message", "Plagiarism detected. File rejected. Similarity: " + plagiarismResult.getSimilarityPercentage() + "%");
@@ -77,7 +79,7 @@ public class TechnologieApplication {
     }
 
 
-@GetMapping("/{fileName}")
+    @GetMapping("/{fileName}")
 public ResponseEntity<byte[]> downloadSourceCode(@PathVariable String fileName) {
     byte[] sourceCode = service.downloadSourceCode(fileName);
     HttpHeaders headers = new HttpHeaders();
