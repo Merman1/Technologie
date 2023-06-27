@@ -75,11 +75,12 @@ public class SourceCodeService {
         }
     }
 
-    public PlagiarismResult checkPlagiarismByLineContent(MultipartFile sourceCodeFile, List<MultipartFile> otherFiles) throws IOException {
+    public PlagiarismResult checkPlagiarismByLineContent(MultipartFile sourceCodeFile) throws IOException {
+        List<SourceCodeModel> storedSourceCodes = repository.findAll();
         String sourceCode = new String(sourceCodeFile.getBytes());
 
-        for (MultipartFile file : otherFiles) {
-            String code = new String(file.getBytes());
+        for (SourceCodeModel storedSourceCode : storedSourceCodes) {
+            String code = new String(storedSourceCode.getSourceCode());
 
             String[] sourceCodeLines = sourceCode.split("\\r?\\n");
             String[] codeLines = code.split("\\r?\\n");
@@ -104,8 +105,6 @@ public class SourceCodeService {
         return new PlagiarismResult(false, 0.0);
     }
 
-
-
     private boolean compareLineContent(String line1, String line2) {
         String[] words1 = line1.split("\\s");
         String[] words2 = line2.split("\\s");
@@ -125,11 +124,9 @@ public class SourceCodeService {
         return similarityPercentage >= 80.0;
     }
 
-
     public PlagiarismResult checkPlagiarism(MultipartFile sourceCodeFile, String method) throws IOException {
         if (method.equals("lineContent")) {
-            List<MultipartFile> otherFiles = new ArrayList<>();
-            PlagiarismResult lineContentPlagiarismResult = checkPlagiarismByLineContent(sourceCodeFile, otherFiles);
+            PlagiarismResult lineContentPlagiarismResult = checkPlagiarismByLineContent(sourceCodeFile);
             return lineContentPlagiarismResult;
         } else {
             List<SourceCodeModel> storedSourceCodes = repository.findAll();
@@ -146,91 +143,60 @@ public class SourceCodeService {
         }
     }
 
-/*
-    public boolean checkPlagiarismByLineLength(MultipartFile sourceCodeFile) throws IOException {
-        List<SourceCodeModel> storedSourceCodes = repository.findAll();
-        String sourceCode = new String(sourceCodeFile.getBytes());
+    public PlagiarismResult checkPlagiarismForRAR(MultipartFile rarFile, String method) throws IOException, ArchiveException {
+        File tempDir = new File(System.getProperty("java.io.tmpdir"));
+        String tempDirPath = tempDir.getAbsolutePath();
+        String tempFilePath = tempDirPath + File.separator + rarFile.getOriginalFilename();
 
-        for (SourceCodeModel storedSourceCode : storedSourceCodes) {
-            String storedCode = new String(storedSourceCode.getSourceCode());
+        File tempFile = new File(tempFilePath);
+        rarFile.transferTo(tempFile);
 
-            String[] sourceCodeLines = sourceCode.split("\\r?\\n");
-            String[] storedCodeLines = storedCode.split("\\r?\\n");
+        double maxSimilarityPercentage = 0.0;
+        boolean isPlagiarized = false;
 
-            if (sourceCodeLines.length == storedCodeLines.length) {
-                boolean isPlagiarized = true;
+        try (ArchiveInputStream archiveInputStream = new ArchiveStreamFactory().createArchiveInputStream(new FileInputStream(tempFile))) {
+            ArchiveEntry entry;
+            while ((entry = archiveInputStream.getNextEntry()) != null) {
+                if (!entry.isDirectory()) {
+                    byte[] sourceCode = IOUtils.toByteArray(archiveInputStream);
+                    if (method.equals("lineContent")) {
+                        MockMultipartFile mockMultipartFile = new MockMultipartFile(
+                                entry.getName(),
+                                sourceCode
+                        );
 
-                for (int i = 0; i < sourceCodeLines.length; i++) {
-                    if (sourceCodeLines[i].length() != storedCodeLines[i].length()) {
-                        isPlagiarized = false;
-                        break;
-                    }
-                }
+                        PlagiarismResult plagiarismResult = checkPlagiarismByLineContent(mockMultipartFile);
 
-                if (isPlagiarized) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-*/
-public PlagiarismResult checkPlagiarismForRAR(MultipartFile rarFile, String method) throws IOException, ArchiveException {
-    File tempDir = new File(System.getProperty("java.io.tmpdir"));
-    String tempDirPath = tempDir.getAbsolutePath();
-    String tempFilePath = tempDirPath + File.separator + rarFile.getOriginalFilename();
-
-    File tempFile = new File(tempFilePath);
-    rarFile.transferTo(tempFile);
-
-    List<SourceCodeModel> storedSourceCodes = repository.findAll();
-    double maxSimilarityPercentage = 0.0;
-    boolean isPlagiarized = false;
-
-    try (ArchiveInputStream archiveInputStream = new ArchiveStreamFactory().createArchiveInputStream(new FileInputStream(tempFile))) {
-        ArchiveEntry entry;
-        while ((entry = archiveInputStream.getNextEntry()) != null) {
-            if (!entry.isDirectory()) {
-                byte[] sourceCode = IOUtils.toByteArray(archiveInputStream);
-                if (method.equals("lineContent")) {
-                    MockMultipartFile mockMultipartFile = new MockMultipartFile(
-                            entry.getName(),
-                            sourceCode
-                    );
-
-                    List<MultipartFile> otherFiles = new ArrayList<>();
-                    otherFiles.add(mockMultipartFile);
-
-                    PlagiarismResult plagiarismResult = checkPlagiarismByLineContent(mockMultipartFile, otherFiles);
-
-                    if (plagiarismResult.isPlagiarized()) {
-                        return plagiarismResult;
+                        if (plagiarismResult.isPlagiarized()) {
+                            return plagiarismResult;
+                        } else {
+                            maxSimilarityPercentage = Math.max(maxSimilarityPercentage, plagiarismResult.getSimilarityPercentage());
+                            isPlagiarized = true; // Ustawienie flagi, jeśli istnieje podobieństwo w jakimkolwiek pliku
+                        }
                     } else {
-                        maxSimilarityPercentage = Math.max(maxSimilarityPercentage, plagiarismResult.getSimilarityPercentage());
-                        isPlagiarized = true; // Ustawienie flagi, jeśli istnieje podobieństwo w jakimkolwiek pliku
-                    }
-                } else {
-                    for (SourceCodeModel storedSourceCode : storedSourceCodes) {
-                        byte[] storedCode = storedSourceCode.getSourceCode();
-                        double similarityPercentage = calculateSimilarityPercentage(sourceCode, storedCode);
-                        maxSimilarityPercentage = Math.max(maxSimilarityPercentage, similarityPercentage);
+                        List<SourceCodeModel> storedSourceCodes = repository.findAll();
+                        for (SourceCodeModel storedSourceCode : storedSourceCodes) {
+                            byte[] storedCode = storedSourceCode.getSourceCode();
+                            double similarityPercentage = calculateSimilarityPercentage(sourceCode, storedCode);
+                            maxSimilarityPercentage = Math.max(maxSimilarityPercentage, similarityPercentage);
+                            if (similarityPercentage >= 80.0) {
+                                isPlagiarized = true;
+                                break; // Przerwij pętlę, jeśli istnieje podobieństwo powyżej 80%
+                            }
+                        }
                     }
                 }
             }
+        } finally {
+            tempFile.delete();
         }
-    } finally {
-        tempFile.delete();
+
+        if (isPlagiarized || maxSimilarityPercentage >= 80.0) {
+            return new PlagiarismResult(true, maxSimilarityPercentage);
+        } else {
+            return new PlagiarismResult(false, maxSimilarityPercentage);
+        }
     }
-
-    if (isPlagiarized || maxSimilarityPercentage >= 80.0) {
-        return new PlagiarismResult(true, maxSimilarityPercentage);
-    } else {
-        return new PlagiarismResult(false, maxSimilarityPercentage);
-    }
-}
-
-
 
     private double calculateSimilarityPercentage(byte[] code1, byte[] code2) {
         int matchCount = 0;
@@ -245,3 +211,4 @@ public PlagiarismResult checkPlagiarismForRAR(MultipartFile rarFile, String meth
         return (double) matchCount / totalComparisonCount * 100.0;
     }
 }
+

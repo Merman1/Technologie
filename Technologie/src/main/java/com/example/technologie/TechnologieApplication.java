@@ -35,7 +35,7 @@ public class TechnologieApplication {
             plagiarismResult = service.checkPlagiarismForRAR(file, method);
         } else {
             if (method.equals("lineContent")) {
-                SourceCodeService.PlagiarismResult lineContentPlagiarismResult = service.checkPlagiarismByLineContent(file, new ArrayList<>());
+                SourceCodeService.PlagiarismResult lineContentPlagiarismResult = service.checkPlagiarismByLineContent(file);
                 plagiarismResult = lineContentPlagiarismResult;
             } else {
                 plagiarismResult = service.checkPlagiarism(file, method);
