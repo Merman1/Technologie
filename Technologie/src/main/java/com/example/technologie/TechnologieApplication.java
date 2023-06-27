@@ -1,5 +1,6 @@
 package com.example.technologie;
 import com.example.technologie.model.SourceCodeModel;
+import com.example.technologie.repo.SourceCodeRepo;
 import com.example.technologie.services.SourceCodeService;
 import org.apache.commons.compress.archivers.ArchiveException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +19,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Controller
 @RequestMapping("/source-code")
@@ -26,9 +28,14 @@ public class TechnologieApplication {
 
     @Autowired
     private SourceCodeService service;
-
+    @Autowired
+    private final SourceCodeRepo sourceCodeRepo;
+    @Autowired
+    public TechnologieApplication(SourceCodeRepo sourceCodeRepo) {
+        this.sourceCodeRepo = sourceCodeRepo;
+    }
     @PostMapping("/upload")
-    public ResponseEntity<?> uploadSourceCode(@RequestParam("file") MultipartFile file, @RequestParam(value = "method", defaultValue = "similarity") String method) throws IOException, ArchiveException {
+    public String uploadSourceCode(@RequestParam("file") MultipartFile file, @RequestParam(value = "method", defaultValue = "similarity") String method, Model model) throws IOException, ArchiveException {
         SourceCodeService.PlagiarismResult plagiarismResult;
 
         if (file.getOriginalFilename().endsWith(".rar")) {
@@ -43,13 +50,16 @@ public class TechnologieApplication {
         }
 
         if (plagiarismResult.isPlagiarized()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Plagiarism detected. File rejected. Similarity: " + plagiarismResult.getSimilarityPercentage() + "%");
+            model.addAttribute("message", "Plagiarism detected. File rejected. Similarity: " + plagiarismResult.getSimilarityPercentage() + "%");
         } else {
             String uploadResult = service.uploadSourceCode(file);
-            return ResponseEntity.status(HttpStatus.OK)
-                    .body(uploadResult);
+            model.addAttribute("message", uploadResult);
         }
+
+        List<SourceCodeModel> sourceCodeList = service.getSourceCodeList();
+        model.addAttribute("sourceCodeList", sourceCodeList);
+
+        return "filess.html";
     }
 
     @GetMapping("/files")
@@ -58,7 +68,11 @@ public class TechnologieApplication {
         model.addAttribute("sourceCodeList", sourceCodeList);
         return "filess.html";
     }
-
+    @GetMapping("/files/delete/{id}")
+    public String deleteFile(@PathVariable("id") Long id) {
+        sourceCodeRepo.deleteById(id);
+        return "redirect:/source-code/files";
+    }
     @GetMapping("/home")
     public String home() {
         return "index.html";

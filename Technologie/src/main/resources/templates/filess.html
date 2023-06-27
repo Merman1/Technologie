@@ -13,7 +13,6 @@
             background-color: #f5f5f5;
             margin: 0;
             padding: 0;
-
         }
 
         .container {
@@ -38,8 +37,8 @@
             border-radius: 4px;
             margin-right: 10px;
             transition: background-color 0.3s ease;
-            border: none; /* Dodana linia */
-            outline: none; /* Dodana linia */
+            border: none;
+            outline: none;
         }
 
         .mybtn:hover {
@@ -99,6 +98,7 @@
         <a href="files" class="mybtn">Wszystkie pliki</a>
     </div>
     <div class="file_content">
+
         <div class="source_code_section">
             <table>
                 <caption><h1>Source Code Files</h1></caption>
@@ -115,13 +115,13 @@
                     <td th:text="${sourceCode.type}"></td>
                     <td>
                         <a th:href="@{/source-code/{fileName}(fileName=${sourceCode.name})}">Download</a>
+                        <a th:href="@{/source-code/files/delete/{id}(id=${sourceCode.id})}" onclick="return confirm('Czy na pewno chcesz usunąć ten plik?')">Delete</a>
                     </td>
                 </tr>
                 </tbody>
             </table>
         </div>
     </div>
-
 </div>
 </body>
 </html>
