@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <link rel="stylesheet" type="text/css" href="/style.css">
+  <title>Projekt</title>
+  <style>
+    /* Dodaj stylizację CSS tutaj */
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #fff;
+      border-radius: 4px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .buttons {
+      margin-bottom: 20px;
+    }
+
+    .mybtn {
+      display: inline-block;
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 4px;
+      margin-right: 10px;
+      transition: background-color 0.3s ease;
+      border: none; /* Dodana linia */
+      outline: none; /* Dodana linia */
+    }
+
+    .mybtn:hover {
+      background-color: #0056b3;
+    }
+
+    .file_content {
+      padding: 20px;
+      background-color: #f5f5f5;
+      border-radius: 4px;
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    input[type="file"] {
+      margin-bottom: 10px;
+    }
+
+    button[type="submit"] {
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button[type="submit"]:hover {
+      background-color: #0056b3;
+    }
+
+    .checkplagiat {
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 4px;
+      display: inline-block;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .checkplagiat:hover {
+      background-color: #0056b3;
+    }
+
+    /* Nowoczesny wygląd dla sekcji "Wgraj plik" */
+    .upload_section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .upload_section h2 {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+
+    .upload_section .message {
+      color: red;
+      margin-bottom: 10px;
+    }
+
+    .upload_section form {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .upload_section input[type="file"] {
+      margin-bottom: 10px;
+      padding: 10px;
+      border: 2px dashed #aaa;
+      border-radius: 4px;
+      width: 300px;
+      font-size: 16px;
+      background-color: #f5f5f5;
+      cursor: pointer;
+    }
+
+    .upload_section label {
+      font-size: 16px;
+      margin-bottom: 5px;
+    }
+
+    .upload_section select {
+      padding: 10px;
+      border-radius: 4px;
+      width: 300px;
+      font-size: 16px;
+    }
+
+    .upload_section button[type="submit"] {
+      margin-top: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="buttons">
+    <a href="home" class="mybtn"><i class="fas fa-home"></i> HOME</a>
+    <a href="files" class="mybtn"><i class="fas fa-file"></i> Wszystkie pliki</a>
+  </div>
+  <div class="file_content">
+    <div class="upload_section">
+      <h2>Wgraj plik</h2>
+      <div class="message" th:if="${message}" th:text="${message}"></div>
+      <form action="/source-code/check-plagiarism" method="post" enctype="multipart/form-data">
+        <input type="file" name="file" required />
+        <label for="method">Metoda sprawdzania:</label>
+        <select name="method" id="method">
+          <option value="lineLength">Sprawdzanie długości linii</option>
+          <option value="similarity">Sprawdzanie podobieństwa kodu</option>
+        </select>
+        <button type="submit"><i class="fas fa-search"></i> Sprawdź plagiat</button>
+
+
+      </form>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
