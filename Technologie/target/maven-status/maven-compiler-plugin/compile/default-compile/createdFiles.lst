@@ -1,0 +1,8 @@
+com\example\technologie\TechnologieApplication.class
+com\example\technologie\utils\imageUtil.class
+com\example\technologie\services\SourceCodeService.class
+com\example\technologie\model\SourceCodeModel$SourceCodeModelBuilder.class
+com\example\technologie\model\SourceCodeModel.class
+com\example\technologie\repo\SourceCodeRepo.class
+com\example\technologie\services\SourceCodeService$PlagiarismResult.class
+com\example\technologie\ModelMapperConfig.class

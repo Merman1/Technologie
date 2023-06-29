@@ -14,7 +14,6 @@ import org.apache.commons.compress.archivers.ArchiveInputStream;
 import org.apache.commons.compress.archivers.ArchiveStreamFactory;
 import org.apache.commons.compress.utils.IOUtils;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -42,13 +41,25 @@ public class SourceCodeService {
     }
 
     public String uploadSourceCode(MultipartFile file) throws IOException {
-        SourceCodeModel sourceCodeModel = repository.save(SourceCodeModel.builder()
-                .name(file.getOriginalFilename())
-                .type(file.getContentType())
-                .sourceCode(file.getBytes()).build());
-        if (sourceCodeModel != null) {
-            return "File uploaded successfully: " + file.getOriginalFilename();
+        String fileName = file.getOriginalFilename();
+
+        // Sprawdzanie, czy plik o takiej samej nazwie już istnieje w bazie danych
+        Optional<SourceCodeModel> existingFile = repository.findByName(fileName);
+        if (existingFile.isPresent()) {
+            return "File with the same name already exists in the database: " + fileName;
         }
+
+        SourceCodeModel sourceCodeModel = SourceCodeModel.builder()
+                .name(fileName)
+                .type(file.getContentType())
+                .sourceCode(file.getBytes())
+                .build();
+        SourceCodeModel savedFile = repository.save(sourceCodeModel);
+
+        if (savedFile != null) {
+            return "File uploaded successfully: " + fileName;
+        }
+
         return null;
     }
 
@@ -106,23 +117,14 @@ public class SourceCodeService {
     }
 
     private boolean compareLineContent(String line1, String line2) {
-        String[] words1 = line1.split("\\s");
-        String[] words2 = line2.split("\\s");
+        // Usunięcie białych znaków z linii przed porównaniem
+        String trimmedLine1 = line1.trim();
+        String trimmedLine2 = line2.trim();
 
-        int matchCount = 0;
-
-        for (String word1 : words1) {
-            for (String word2 : words2) {
-                if (word1.equalsIgnoreCase(word2)) {
-                    matchCount++;
-                    break;
-                }
-            }
-        }
-
-        double similarityPercentage = (double) matchCount / Math.max(words1.length, words2.length) * 100.0;
-        return similarityPercentage >= 80.0;
+        // Porównanie linii bez uwzględniania wielkości liter
+        return trimmedLine1.equalsIgnoreCase(trimmedLine2);
     }
+
 
     public PlagiarismResult checkPlagiarism(MultipartFile sourceCodeFile, String method) throws IOException {
         if (method.equals("lineContent")) {
@@ -143,6 +145,21 @@ public class SourceCodeService {
         }
     }
 
+    private double calculateSimilarityPercentage(byte[] code1, byte[] code2) {
+        // Tu możesz zaimplementować bardziej zaawansowany algorytm porównywania zawartości plików, np. algorytm Levenshteina, porównywanie n-gramów, itp.
+        int matchCount = 0;
+        int totalComparisonCount = Math.min(code1.length, code2.length);
+
+        for (int i = 0; i < totalComparisonCount; i++) {
+            if (code1[i] == code2[i]) {
+                matchCount++;
+            }
+        }
+
+        return (double) matchCount / totalComparisonCount * 100.0;
+    }
+
+
     public PlagiarismResult checkPlagiarismForRAR(MultipartFile rarFile, String method) throws IOException, ArchiveException {
         File tempDir = new File(System.getProperty("java.io.tmpdir"));
         String tempDirPath = tempDir.getAbsolutePath();
@@ -155,11 +172,20 @@ public class SourceCodeService {
         boolean isPlagiarized = false;
 
         try (ArchiveInputStream archiveInputStream = new ArchiveStreamFactory().createArchiveInputStream(new FileInputStream(tempFile))) {
+            List<SourceCodeModel> storedSourceCodes = repository.findAll();
+            List<byte[]> storedCodes = new ArrayList<>();
+
+            for (SourceCodeModel storedSourceCode : storedSourceCodes) {
+                storedCodes.add(storedSourceCode.getSourceCode());
+            }
+
             ArchiveEntry entry;
             while ((entry = archiveInputStream.getNextEntry()) != null) {
                 if (!entry.isDirectory()) {
                     byte[] sourceCode = IOUtils.toByteArray(archiveInputStream);
-                    if (method.equals("lineContent")) {
+
+                    // Dodaj warunek, który sprawdza, czy plik jest tekstem
+                    if (isTextFile(entry.getName())) {
                         MockMultipartFile mockMultipartFile = new MockMultipartFile(
                                 entry.getName(),
                                 sourceCode
@@ -174,9 +200,7 @@ public class SourceCodeService {
                             isPlagiarized = true; // Ustawienie flagi, jeśli istnieje podobieństwo w jakimkolwiek pliku
                         }
                     } else {
-                        List<SourceCodeModel> storedSourceCodes = repository.findAll();
-                        for (SourceCodeModel storedSourceCode : storedSourceCodes) {
-                            byte[] storedCode = storedSourceCode.getSourceCode();
+                        for (byte[] storedCode : storedCodes) {
                             double similarityPercentage = calculateSimilarityPercentage(sourceCode, storedCode);
                             maxSimilarityPercentage = Math.max(maxSimilarityPercentage, similarityPercentage);
                             if (similarityPercentage >= 80.0) {
@@ -198,17 +222,26 @@ public class SourceCodeService {
         }
     }
 
-    private double calculateSimilarityPercentage(byte[] code1, byte[] code2) {
-        int matchCount = 0;
-        int totalComparisonCount = Math.min(code1.length, code2.length);
 
-        for (int i = 0; i < totalComparisonCount; i++) {
-            if (code1[i] == code2[i]) {
-                matchCount++;
+    private boolean isTextFile(String fileName) {
+        // Sprawdź rozszerzenie pliku, czy wskazuje na plik tekstowy (np. .txt, .java, .cpp, itp.)
+        String[] textFileExtensions = { ".txt", ".java", ".cpp" }; // Dodaj inne rozszerzenia plików tekstowych, jeśli jest taka potrzeba
+        for (String extension : textFileExtensions) {
+            if (fileName.toLowerCase().endsWith(extension)) {
+                return true;
             }
         }
+        return false;
+    }
 
-        return (double) matchCount / totalComparisonCount * 100.0;
+
+
+
+
+
+
+    public void deleteSourceCodeFile(Long id) {
+        repository.deleteById(id);
     }
 }
 
